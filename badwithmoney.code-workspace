@@ -1,11 +1,17 @@
 {
   "folders": [
-	{
-		"path": "backend/rust"
-	},
-	{
-		"path": "."
-	}
-],
+    {
+      "name": "rust",
+      "path": "backend/rust"
+    },
+    {
+      "name": "frontend",
+      "path": "frontend"
+    },
+    {
+      "name": "BadWithMoney",
+      "path": "."
+    }
+  ],
   "settings": {}
 }
