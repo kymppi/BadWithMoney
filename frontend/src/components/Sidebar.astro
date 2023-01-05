@@ -1,0 +1,33 @@
+---
+import { Icon } from 'astro-icon';
+
+interface Link {
+  label: string;
+  link: string;
+  icon: string;
+}
+
+export interface Props {
+  links: Link[];
+}
+
+const { links } = Astro.props;
+---
+
+<nav class="ga-sidebar h-full">
+  <div class="flex flex-col justify-center items-center h-full">
+    {
+      links.map((link) => (
+        <a
+          href={link.link}
+          class="w-full px-4 flex items-center hover:bg-gray-300"
+        >
+          <div class="w-16">
+            <Icon name={link.icon} />
+          </div>
+          <p class="text-md m-2 grow">{link.label}</p>
+        </a>
+      ))
+    }
+  </div>
+</nav>

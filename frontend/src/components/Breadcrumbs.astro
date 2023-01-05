@@ -1,0 +1,44 @@
+---
+import type { Path } from '../lib/types';
+
+export interface Props {
+  items: Path[];
+  separator?: string;
+}
+
+const { items, separator = '/' } = Astro.props;
+
+const renderThese: { isSeparator: boolean; label: string; link: string }[] = [];
+const paths: string[] = [];
+
+items.forEach((item, index) => {
+  paths.push(item.link);
+
+  renderThese.push({
+    isSeparator: false,
+    label: item.label,
+    link: paths.join(''),
+  });
+
+  if (index === items.length - 1) return;
+  renderThese.push({
+    isSeparator: true,
+    label: '',
+    link: '',
+  });
+});
+---
+
+<div class="flex gap-2">
+  {
+    renderThese.map((el) => {
+      if (el.isSeparator) return <span class="text-gray-500">{separator}</span>;
+
+      return (
+        <a class="hover:text-orange-600" href={el.link}>
+          {el.label}
+        </a>
+      );
+    })
+  }
+</div>

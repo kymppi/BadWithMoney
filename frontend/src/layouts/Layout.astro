@@ -1,35 +1,49 @@
 ---
+import Header from '../components/Header.astro';
+import Sidebar from '../components/Sidebar.astro';
+import type { Path } from '../lib/types';
+
 export interface Props {
-	title: string;
+  path: Path[];
 }
 
-const { title } = Astro.props;
+const { path } = Astro.props;
 ---
 
 <!DOCTYPE html>
 <html lang="en">
-	<head>
-		<meta charset="UTF-8" />
-		<meta name="viewport" content="width=device-width" />
-		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-		<meta name="generator" content={Astro.generator} />
-		<title>{title}</title>
-	</head>
-	<body>
-		<slot />
-	</body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="generator" content={Astro.generator} />
+    <title>{path[0].label}</title>
+  </head>
+  <body class="layout min-h-screen">
+    <Header path={path} />
+    <h1 class="ga-logo text-center font-bold text-xl my-auto">BadWithMoney</h1>
+
+    <Sidebar
+      links={Array(5).fill({
+        link: '#',
+        label: 'Placeholder',
+        icon: 'mdi:money',
+      })}
+    />
+    <div class="ga-content bg-purple-500">
+      <slot />
+    </div>
+  </body>
 </html>
 <style is:global>
-	:root {
-		--accent: 124, 58, 237;
-		--accent-gradient: linear-gradient(45deg, rgb(var(--accent)), #da62c4 30%, white 60%);
-	}
-	html {
-		font-family: system-ui, sans-serif;
-		background-color: #F6F6F6;
-	}
-	code {
-		font-family: Menlo, Monaco, Lucida Console, Liberation Mono, DejaVu Sans Mono,
-			Bitstream Vera Sans Mono, Courier New, monospace;
-	}
+  .layout {
+    display: grid;
+    grid-template-areas:
+      'logo header'
+      'sidebar content';
+    grid-template-columns: 180px 1fr;
+    /* 180px is the sidebar width */
+    grid-template-rows: 60px 1fr;
+    /* 60px is the header height */
+  }
 </style>
