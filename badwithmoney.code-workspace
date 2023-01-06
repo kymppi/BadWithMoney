@@ -1,8 +1,8 @@
 {
   "folders": [
     {
-      "name": "rust",
-      "path": "backend/rust"
+      "name": "fsharp",
+      "path": "backend/fsharp"
     },
     {
       "name": "frontend",
