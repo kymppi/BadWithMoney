@@ -6,12 +6,23 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="Extensions.fs" />
+    <Compile Include="Domain.fs" />
+    <Compile Include="Provider.fs" />
+    <Compile Include="Request.fs" />
+    <Compile Include="HttpHandlers.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Donald" Version="9.0.0" />
+    <None Include="Dockerfile" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Falco" Version="4.0.3" />
+    <PackageReference Include="FSharp.OpenApi" Version="0.5.2" />
+    <PackageReference Include="FSharp.UMX" Version="1.1.0" />
+    <PackageReference Include="Marten.FSharp" Version="0.6.1" />
     <PackageReference Include="Validus" Version="4.1.0" />
   </ItemGroup>
 

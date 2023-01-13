@@ -661,3 +661,5 @@ FodyWeavers.xsd
 # End of https://www.toptal.com/developers/gitignore/api/fsharp,visualstudio,rider,visualstudiocode,rust,node
 
 .direnv/
+dev_data/
+.idea/
