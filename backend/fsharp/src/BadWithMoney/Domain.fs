@@ -9,11 +9,41 @@ open Validus.Operators
 type budgetId
 
 type BudgetId = Guid<budgetId>
-type BudgetName = private BudgetName of string
-type CategoryName = private CategoryName of string
-type PositiveDecimal = private PositiveDecimal of decimal
-type AllocableAmount = AllocableAmount of decimal
-type NonEmptyString = private NonEmptyString of string
+
+type BudgetName =
+  private
+  | BudgetName of string
+
+  override this.ToString() =
+    let (BudgetName name) = this
+    name
+
+type CategoryName =
+  private
+  | CategoryName of string
+
+  override this.ToString() =
+    let (CategoryName name) = this
+    name
+
+type PositiveDecimal =
+  private
+  | PositiveDecimal of decimal
+
+  static member op_Explicit(PositiveDecimal decimal) : decimal = decimal
+
+type AllocableAmount =
+  | AllocableAmount of decimal
+
+  static member op_Explicit(AllocableAmount decimal) : decimal = decimal
+
+type NonEmptyString =
+  private
+  | NonEmptyString of string
+
+  override this.ToString() =
+    let (NonEmptyString value) = this
+    value
 
 type Goal = {
   Name: NonEmptyString
@@ -60,8 +90,6 @@ module BudgetId =
 
 [<RequireQualifiedAccess>]
 module BudgetName =
-  let value (BudgetName name) = name
-
   let create name =
     let validator = Check.String.notEmpty <+> Check.String.lessThanLen 150
 
@@ -72,8 +100,6 @@ module BudgetName =
 
 [<RequireQualifiedAccess>]
 module CategoryName =
-  let value (CategoryName name) = name
-
   let create name =
     let validator = Check.String.notEmpty <+> Check.String.lessThanLen 75
 
@@ -84,8 +110,6 @@ module CategoryName =
 
 [<RequireQualifiedAccess>]
 module PositiveDecimal =
-  let value (PositiveDecimal decimal) = decimal
-
   let create value = validate {
     let! name = Check.Decimal.greaterThanOrEqualTo 0m "amount" value
     return PositiveDecimal name
@@ -97,8 +121,6 @@ module AllocableAmount =
 
 [<RequireQualifiedAccess>]
 module NonEmptyString =
-  let value (NonEmptyString value) = value
-
   // TODO: Pass in field name? 'Value' is quite generic.
   let create value =
     let validator = Check.String.notEmpty
@@ -171,8 +193,6 @@ module Budget =
 
   let sumExpenses budget =
     let sumCategory category =
-      category.Expenses
-      |> List.sumBy (fun expense -> PositiveDecimal.value expense.Amount)
+      category.Expenses |> List.sumBy (fun expense -> decimal expense.Amount)
 
     budget.Categories |> List.sumBy sumCategory
-
