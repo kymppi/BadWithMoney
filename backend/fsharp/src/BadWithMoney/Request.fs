@@ -1,8 +1,12 @@
 ﻿[<AutoOpen>]
 module RequestUtils
 
-open Validus
+open System.Security.Claims
+open Microsoft.AspNetCore.Http
 open Falco
+open Validus
+open FsToolkit.ErrorHandling
+open Domain
 
 type ProblemDetails = {
   Type: string
@@ -26,6 +30,11 @@ module ProblemDetails =
 
 [<RequireQualifiedAccess>]
 module Request =
+  let getUserId (ctx: HttpContext) =
+    ctx.User.FindFirst(ClaimTypes.NameIdentifier)
+    |> Option.ofNull
+    |> Option.map (fun claim -> UserId.create claim.Value)
+
   let mapValidateJson
     (validator: 'a -> ValidationResult<'b>)
     (onSuccess: 'b -> HttpHandler)

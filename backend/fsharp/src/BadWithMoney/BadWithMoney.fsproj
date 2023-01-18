@@ -22,7 +22,9 @@
     <PackageReference Include="Falco" Version="4.0.3" />
     <PackageReference Include="FSharp.OpenApi" Version="0.5.2" />
     <PackageReference Include="FSharp.UMX" Version="1.1.0" />
+    <PackageReference Include="FsToolkit.ErrorHandling" Version="4.2.1" />
     <PackageReference Include="Marten.FSharp" Version="0.6.1" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.Google" Version="7.0.2" />
     <PackageReference Include="Validus" Version="4.1.0" />
   </ItemGroup>
 

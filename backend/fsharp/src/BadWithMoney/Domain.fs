@@ -6,9 +6,16 @@ open Validus
 open Validus.Operators
 
 [<Measure>]
+type userId
+
+[<Measure>]
 type budgetId
 
+type UserId = string<userId>
 type BudgetId = Guid<budgetId>
+
+module UserId =
+  let create (value: string) : string<userId> = %value
 
 type BudgetName =
   private
@@ -76,6 +83,7 @@ type Transaction = {
 
 type Budget = {
   Id: BudgetId
+  UserId: UserId
   Name: BudgetName
   MonthlyIncome: PositiveDecimal
   MaximumAllocable: AllocableAmount
@@ -132,12 +140,13 @@ module NonEmptyString =
 
 [<RequireQualifiedAccess>]
 module Budget =
-  let create id name monthlyIncome =
+  let create budgetId userId name monthlyIncome =
     let (PositiveDecimal income) = monthlyIncome
     let maximumAllocable = AllocableAmount(income)
 
     {
-      Id = id
+      Id = budgetId
+      UserId = userId
       Name = name
       MonthlyIncome = monthlyIncome
       MaximumAllocable = maximumAllocable
