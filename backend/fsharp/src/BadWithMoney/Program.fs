@@ -1,15 +1,39 @@
+open System.Text.Json.Serialization
+open Domain
 open Falco
 open Falco.Routing
 open Falco.HostBuilder
 open Marten
+open Marten.Services
 open Microsoft.AspNetCore.Authentication
 open Microsoft.AspNetCore.Authentication.Cookies
 open Microsoft.AspNetCore.Authentication.Google
 open Microsoft.Extensions.Configuration
 open Microsoft.Extensions.DependencyInjection
+open Weasel.Core
 
 let configureMarten (configuration: IConfiguration) (storeOptions: StoreOptions) =
   storeOptions.Connection(configuration.GetConnectionString("Postgresql"))
+
+  let serializer =
+    SystemTextJsonSerializer(EnumStorage = EnumStorage.AsString, Casing = Casing.CamelCase)
+
+  // https://www.jannikbuschke.de/blog/fsharp-marten/
+  serializer.Customize(fun options ->
+    options.Converters.Add(
+      JsonFSharpConverter(
+        JsonUnionEncoding.AdjacentTag
+        ||| JsonUnionEncoding.NamedFields
+        ||| JsonUnionEncoding.UnwrapRecordCases
+        ||| JsonUnionEncoding.UnwrapOption
+        ||| JsonUnionEncoding.UnwrapSingleCaseUnions
+        ||| JsonUnionEncoding.AllowUnorderedTag,
+        allowNullFields = false
+      )
+    ))
+
+  storeOptions.Serializer(serializer)
+  storeOptions.RegisterDocumentType<Budget>()
 
 let configureServices (configuration: IConfiguration) (serviceCollection: IServiceCollection) =
   serviceCollection.AddMarten(configureMarten configuration) |> ignore
