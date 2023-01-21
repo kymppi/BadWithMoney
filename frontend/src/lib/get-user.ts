@@ -5,7 +5,9 @@ export const getUser = async (cookies: string | null): Promise<User> => {
     headers: {
       Cookie: cookies || '',
     },
-  }).then((data) => data.json());
+  })
+    .then((data) => data.json())
+    .catch(() => []);
 
   if (user.length > 0) {
     // item2 should be the id
