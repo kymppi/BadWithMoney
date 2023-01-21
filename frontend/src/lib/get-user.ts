@@ -11,12 +11,14 @@ export const getUser = async (cookies: string | null): Promise<User> => {
   if (user[0].Item2) {
     return {
       loggedIn: true,
+      id: user[0].Item2,
       name: user[1].Item2,
     };
   }
 
   return {
     loggedIn: false,
+    id: '',
     name: '',
   };
 };

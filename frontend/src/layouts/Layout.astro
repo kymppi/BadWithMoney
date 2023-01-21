@@ -62,7 +62,6 @@ const storeThisUser = JSON.stringify(user);
 
   const userFromServer = getDataFromServer<User>('data-temp-user-store');
 
-  console.log('userFromS', userFromServer);
   if (userFromServer) {
     user.set(userFromServer);
   }

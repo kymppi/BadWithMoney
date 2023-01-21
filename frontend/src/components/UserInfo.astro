@@ -27,8 +27,6 @@
 
   const userInfo = user.get();
 
-  console.log('userInfo', userInfo);
-
   if (userInfo.loggedIn) {
     setUsername(userInfo.name);
   } else {
@@ -36,7 +34,6 @@
   }
 
   user.listen((value, changedKey) => {
-    console.log(value, changedKey);
     // incase changedKey is undefined
     if (!value.loggedIn) {
       showBox(false);
