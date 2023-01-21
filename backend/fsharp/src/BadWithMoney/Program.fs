@@ -62,7 +62,7 @@ let main args =
     use_authorization
 
     endpoints [
-      post "/api/google-signin" HttpHandlers.GoogleSignIn.signInHandler
+      get "/api/google-signin" HttpHandlers.GoogleSignIn.signInHandler
       get "/api/claims" HttpHandlers.GoogleSignIn.claims
       post "/api/budgets" HttpHandlers.createBudgetHandler
       post "/api/budgets/{budgetId}/category" HttpHandlers.createBudgetCategory
