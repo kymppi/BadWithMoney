@@ -1,0 +1,10 @@
+---
+export interface Props {
+  component?: string;
+  [key: string]: any;
+}
+
+const { component: Component = 'button', ...rest } = Astro.props;
+---
+
+<Component {...rest}><slot /></Component>

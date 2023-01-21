@@ -1,7 +1,7 @@
 import { defineConfig } from 'astro/config';
 
 // https://astro.build/config
-import tailwind from "@astrojs/tailwind";
+import tailwind from '@astrojs/tailwind';
 
 // https://astro.build/config
 export default defineConfig({
@@ -11,7 +11,7 @@ export default defineConfig({
       '/api': {
         target: 'http://localhost:5000',
         changeOrigin: true,
-      }
-    }
-  }
+      },
+    },
+  },
 });
