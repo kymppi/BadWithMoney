@@ -1,0 +1,53 @@
+---
+---
+
+<div data-user-info>
+  <p data-user-name-text></p>
+</div>
+
+<script>
+  import { user } from '../state/user';
+
+  const userInfoBox = document.querySelectorAll('[data-user-info]');
+  const usernameText = document.querySelectorAll('[data-user-name-text]');
+
+  const setUsername = (username: string) => {
+    usernameText.forEach((el) => {
+      el.textContent = username;
+    });
+  };
+
+  const showBox = (show: boolean = true) => {
+    userInfoBox.forEach((box) => {
+      if (show) return box.removeAttribute('hidden');
+
+      box.setAttribute('hidden', 'true');
+    });
+  };
+
+  const userInfo = user.get();
+
+  console.log('userInfo', userInfo);
+
+  if (userInfo.loggedIn) {
+    setUsername(userInfo.name);
+  } else {
+    showBox(false);
+  }
+
+  user.listen((value, changedKey) => {
+    console.log(value, changedKey);
+    // incase changedKey is undefined
+    if (!value.loggedIn) {
+      showBox(false);
+    }
+    switch (changedKey) {
+      case 'loggedIn': {
+        showBox(value.loggedIn);
+      }
+      case 'name': {
+        setUsername(value.name);
+      }
+    }
+  });
+</script>

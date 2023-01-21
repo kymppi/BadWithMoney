@@ -2,12 +2,16 @@
 import Header from '../components/Header.astro';
 import Sidebar from '../components/Sidebar.astro';
 import type { Path } from '../lib/types';
+import type { User } from '../state/user';
 
 export interface Props {
   path: Path[];
+  user?: User;
 }
 
-const { path } = Astro.props;
+const { path, user } = Astro.props;
+
+const storeThisUser = JSON.stringify(user);
 ---
 
 <!DOCTYPE html>
@@ -33,9 +37,13 @@ const { path } = Astro.props;
     <div class="ga-content bg-purple-500">
       <slot />
     </div>
+    <div data-hidden data-temp-user-store={storeThisUser}></div>
   </body>
 </html>
 <style is:global>
+  [data-size='hidden'] {
+    display: none;
+  }
   .layout {
     display: grid;
     grid-template-areas:
@@ -47,3 +55,15 @@ const { path } = Astro.props;
     /* 60px is the header height */
   }
 </style>
+<script>
+  import { getDataFromServer } from '../lib/get-data';
+
+  import { User, user } from '../state/user';
+
+  const userFromServer = getDataFromServer<User>('data-temp-user-store');
+
+  console.log('userFromS', userFromServer);
+  if (userFromServer) {
+    user.set(userFromServer);
+  }
+</script>
