@@ -1,6 +1,7 @@
 ---
 import type { Path } from '../lib/types';
 import Breadcrumbs from './Breadcrumbs.astro';
+import LoginButton from './LoginButton.astro';
 import { UserInfo } from './UserInfo';
 
 export interface Props {
@@ -11,8 +12,8 @@ const { path } = Astro.props;
 ---
 
 <header
-  class="ga-header flex items-center p-4 font-semibold text-lg gap-2 text-gray-900"
+  class="ga-header flex items-center p-4 font-semibold text-lg gap-2 text-gray-900 justify-between"
 >
   <Breadcrumbs items={path} separator=" > " />
-  <UserInfo client:load />
+  <UserInfo client:load><LoginButton /></UserInfo>
 </header>

@@ -1,11 +1,8 @@
 ---
-import LoginButton from '../components/LoginButton.astro';
 import Layout from '../layouts/Layout.astro';
 import { getUser } from '../lib/get-user';
 
 const user = await getUser(Astro.request.headers.get('cookie'));
 ---
 
-<Layout user={user} path={[{ label: 'Home', link: '/home' }]}>
-  <LoginButton />
-</Layout>
+<Layout user={user} path={[{ label: 'Home', link: '/home' }]} />
