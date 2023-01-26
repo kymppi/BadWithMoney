@@ -1,8 +1,8 @@
 {
   "folders": [
     {
-      "name": "fsharp",
-      "path": "backend/fsharp"
+      "name": "backend",
+      "path": "backend"
     },
     {
       "name": "frontend",
