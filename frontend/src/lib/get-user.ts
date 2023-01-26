@@ -11,7 +11,7 @@ export const getUser = async (cookies: string | null): Promise<User> => {
 
   if (user.length > 0) {
     // item2 should be the id
-    if (user[0].Item2) {
+    if (user.id) {
       return {
         loggedIn: true,
         id: user.id,
