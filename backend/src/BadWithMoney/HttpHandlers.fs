@@ -9,6 +9,7 @@ open FsToolkit.ErrorHandling
 open Microsoft.AspNetCore.Authentication
 open Microsoft.AspNetCore.Authentication.Google
 open Microsoft.AspNetCore.Http
+open Microsoft.Extensions.Configuration
 open Validus
 open Domain
 open Marten
@@ -39,11 +40,13 @@ let inline budgetAuthorizer
   }
 
 module GoogleSignIn =
-  let signInHandler: HttpHandler =
-    fun ctx -> task {
-      let authProperties = AuthenticationProperties(RedirectUri = "/")
-      do! ctx.ChallengeAsync(GoogleDefaults.AuthenticationScheme, authProperties)
-    }
+  let signInHandler (configuration: IConfiguration) : HttpHandler =
+    Request.mapQuery
+      (fun reader -> reader.GetString("redirectUrl"))
+      (fun redirectUrl httpContext ->
+        let clientDomain = configuration["CLIENT_DOMAIN"]
+        let properties = AuthenticationProperties(RedirectUri = clientDomain + redirectUrl)
+        httpContext.ChallengeAsync(GoogleDefaults.AuthenticationScheme, properties))
 
   // NOTE(sheridanchris): this is only for development, should be removed in the future.
   let claims: HttpHandler =
