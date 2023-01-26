@@ -1,7 +1,7 @@
 import type { User } from '../state/user';
 
 export const getUser = async (cookies: string | null): Promise<User> => {
-  const user = await fetch('http://localhost:3000/api/claims', {
+  const user = await fetch('http://localhost:3000/api/me', {
     headers: {
       Cookie: cookies || '',
     },
@@ -14,8 +14,9 @@ export const getUser = async (cookies: string | null): Promise<User> => {
     if (user[0].Item2) {
       return {
         loggedIn: true,
-        id: user[0].Item2,
-        name: user[1].Item2,
+        id: user.id,
+        name: user.name,
+        email: user.email
       };
     }
   }
@@ -24,5 +25,6 @@ export const getUser = async (cookies: string | null): Promise<User> => {
     loggedIn: false,
     id: '',
     name: '',
+    email: ''
   };
 };
