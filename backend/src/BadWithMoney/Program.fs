@@ -43,7 +43,9 @@ let configureServices (configuration: IConfiguration) (serviceCollection: IServi
       options.DefaultScheme <- CookieAuthenticationDefaults.AuthenticationScheme
       options.DefaultChallengeScheme <- GoogleDefaults.AuthenticationScheme
       options.DefaultAuthenticateScheme <- GoogleDefaults.AuthenticationScheme)
-    .AddCookie(fun options -> options.LoginPath <- "/api/google-signin"; options.Cookie.Name <- "auth")
+    .AddCookie(fun options ->
+      options.LoginPath <- "/api/google-signin"
+      options.Cookie.Name <- "auth")
     .AddGoogle(fun options ->
       options.ClientId <- configuration["GOOGLE_CLIENT_ID"]
       options.ClientSecret <- configuration["GOOGLE_SECRET"]
