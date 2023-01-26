@@ -23,6 +23,9 @@ let forbiddenHandler: HttpHandler =
 let notFoundHandler: HttpHandler =
   Response.withStatusCode StatusCodes.Status404NotFound >> Response.ofEmpty
 
+let requireAuthentication successHandler =
+  Request.ifAuthenticated successHandler unauthorizedHandler
+
 // TODO: Is this any good?
 let inline budgetAuthorizer
   (f: HttpContext -> Task<Budget option>)
@@ -48,12 +51,21 @@ module GoogleSignIn =
         let properties = AuthenticationProperties(RedirectUri = clientDomain + redirectUrl)
         httpContext.ChallengeAsync(GoogleDefaults.AuthenticationScheme, properties))
 
-  // NOTE(sheridanchris): this is only for development, should be removed in the future.
   let claims: HttpHandler =
-    fun ctx -> task {
-      let claims = ctx.User.Claims |> Seq.map (fun claim -> claim.Type, claim.Value)
-      do! Response.ofJson claims ctx
-    }
+    requireAuthentication (fun ctx ->
+      let claim (key: string) =
+        ctx.User.FindFirst(key)
+        |> Option.ofNull
+        |> Option.map (fun claim -> claim.Value)
+        |> Option.defaultValue ""
+
+      Response.ofJson
+        {|
+          id = claim ClaimTypes.NameIdentifier
+          name = claim ClaimTypes.Name
+          email = claim ClaimTypes.Email
+        |}
+        ctx)
 
 module GetBudgets =
   let handler (getBudgetsForUser: Provider.GetBudgetsForUser) : HttpHandler =
@@ -219,9 +231,6 @@ module CreateExpense =
       Response.validationProblemDetails "/budget/category/expense"
 
     Request.mapValidateJson validateRequest handleCreateExpenseRequest handleValidationErrors
-
-let requireAuthentication successHandler =
-  Request.ifAuthenticated successHandler unauthorizedHandler
 
 let createBudgetHandler: HttpHandler =
   requireAuthentication (Services.inject<IDocumentSession> (Provider.saveBudget >> CreateBudget.handler))

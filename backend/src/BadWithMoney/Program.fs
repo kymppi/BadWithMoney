@@ -65,7 +65,7 @@ let main args =
 
     endpoints [
       get "/api/google-signin" (HttpHandlers.GoogleSignIn.signInHandler configuration)
-      get "/api/claims" HttpHandlers.GoogleSignIn.claims
+      get "/api/me" HttpHandlers.GoogleSignIn.claims
       post "/api/budgets" HttpHandlers.createBudgetHandler
       post "/api/budgets/{budgetId}/category" HttpHandlers.createBudgetCategory
       post "/api/budgets/{budgetId}/category/expense" HttpHandlers.createExpense
