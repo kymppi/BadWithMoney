@@ -39,11 +39,6 @@ type PositiveDecimal =
 
   static member op_Explicit(PositiveDecimal decimal) : decimal = decimal
 
-type AllocableAmount =
-  | AllocableAmount of decimal
-
-  static member op_Explicit(AllocableAmount decimal) : decimal = decimal
-
 type NonEmptyString =
   private
   | NonEmptyString of string
@@ -58,38 +53,30 @@ type Goal = {
   AmountSaved: PositiveDecimal
 }
 
-type Expense = {
-  Details: NonEmptyString
+type TransactionDetails = {
   Amount: PositiveDecimal
-  Date: DateOnly
+  OccuredAt: DateTime
 }
+
+type Transaction =
+  | Income of TransactionDetails
+  | Expense of TransactionDetails
 
 type Category = {
   Name: CategoryName
   Allocation: PositiveDecimal
-  Expenses: Expense list
-}
-
-type TransactionType =
-  | Deposit
-  | Withdrawl
-
-type Transaction = {
-  Reason: NonEmptyString
-  Amount: PositiveDecimal
-  Type: TransactionType
-  Date: DateOnly
+  Transactions: Transaction list
 }
 
 type Budget = {
   Id: BudgetId
   UserId: UserId
   Name: BudgetName
-  MonthlyIncome: PositiveDecimal
-  MaximumAllocable: AllocableAmount
+  MaximumAllocable: PositiveDecimal
   Categories: Category list
   Goals: Goal list
-  Transactions: Transaction list
+  CreatedAt: DateTime
+  UpdatedAt: DateTime
 }
 
 [<RequireQualifiedAccess>]
@@ -124,10 +111,6 @@ module PositiveDecimal =
   }
 
 [<RequireQualifiedAccess>]
-module AllocableAmount =
-  let isOverAllocated (AllocableAmount amount) = amount < 0m
-
-[<RequireQualifiedAccess>]
 module NonEmptyString =
   // TODO: Pass in field name? 'Value' is quite generic.
   let create value =
@@ -140,37 +123,35 @@ module NonEmptyString =
 
 [<RequireQualifiedAccess>]
 module Budget =
-  let create budgetId userId name monthlyIncome =
-    let (PositiveDecimal income) = monthlyIncome
-    let maximumAllocable = AllocableAmount(income)
+  let create now budgetId userId name maximumAllocable = {
+    Id = budgetId
+    UserId = userId
+    Name = name
+    MaximumAllocable = maximumAllocable
+    Categories = []
+    Goals = []
+    CreatedAt = now
+    UpdatedAt = now
+  }
 
-    {
-      Id = budgetId
-      UserId = userId
-      Name = name
-      MonthlyIncome = monthlyIncome
-      MaximumAllocable = maximumAllocable
-      Categories = []
-      Goals = []
-      Transactions = []
-    }
+  let transact transaction categoryName budget =
+    let category =
+      budget.Categories |> List.tryFind (fun category -> category.Name = categoryName)
 
-  let transact transaction budget =
-    let transactions = transaction :: budget.Transactions
-    let (AllocableAmount allocableAmount) = budget.MaximumAllocable
-    let (PositiveDecimal transactionAmount) = transaction.Amount
+    match category with
+    | None -> Error "That budget category does not exist."
+    | Some category ->
+      let transactions = transaction :: category.Transactions
 
-    match transaction.Type with
-    | Deposit ->
-      { budget with
-          Transactions = transactions
-          MaximumAllocable = AllocableAmount(allocableAmount + transactionAmount)
-      }
-    | Withdrawl ->
-      { budget with
-          Transactions = transactions
-          MaximumAllocable = AllocableAmount(allocableAmount - transactionAmount)
-      }
+      let newCategory =
+        { category with
+            Transactions = transactions
+        }
+
+      Ok
+        { budget with
+            Categories = List.replace category newCategory budget.Categories
+        }
 
   let createCategory categoryName allocation budget =
     let existingCategory =
@@ -182,26 +163,36 @@ module Budget =
       let category = {
         Name = categoryName
         Allocation = allocation
-        Expenses = []
+        Transactions = []
       }
 
       let categories = category :: budget.Categories
       Ok { budget with Categories = categories }
 
-  let createExpense categoryName expense budget =
-    let category =
-      budget.Categories |> List.tryFind (fun category -> category.Name = categoryName)
+  let sumExpensesForCategory category =
+    let calculateExpense transaction =
+      match transaction with
+      | Income _ -> 0m
+      | Expense details -> decimal details.Amount
 
-    match category with
-    | None -> Error "Budget category doesn't exist."
-    | Some category ->
-      let expenses = expense :: category.Expenses
-      let newCategory = { category with Expenses = expenses }
-      let categories = budget.Categories |> List.replace category newCategory
-      Ok { budget with Categories = categories }
+    category.Transactions |> List.sumBy calculateExpense
 
   let sumExpenses budget =
-    let sumCategory category =
-      category.Expenses |> List.sumBy (fun expense -> decimal expense.Amount)
+    budget.Categories |> List.sumBy sumExpensesForCategory
 
-    budget.Categories |> List.sumBy sumCategory
+  let popularCategories n budget =
+    budget.Categories
+    |> List.map (fun category -> category, sumExpensesForCategory category)
+    |> List.sortByDescending snd
+    |> List.take n
+
+  let recentTransactions n budget =
+    let occuredAt transaction =
+      match transaction with
+      | Income details -> details.OccuredAt
+      | Expense details -> details.OccuredAt
+
+    budget.Categories
+    |> List.collect (fun category -> category.Transactions)
+    |> List.sortByDescending occuredAt
+    |> List.take n
