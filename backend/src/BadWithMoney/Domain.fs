@@ -184,7 +184,7 @@ module Budget =
     budget.Categories
     |> List.map (fun category -> category, sumExpensesForCategory category)
     |> List.sortByDescending snd
-    |> List.take n
+    |> List.truncate n
 
   let recentTransactions n budget =
     let occuredAt transaction =
@@ -195,4 +195,4 @@ module Budget =
     budget.Categories
     |> List.collect (fun category -> category.Transactions)
     |> List.sortByDescending occuredAt
-    |> List.take n
+    |> List.truncate n
