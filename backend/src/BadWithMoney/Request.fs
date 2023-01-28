@@ -49,8 +49,13 @@ module Request =
 
 [<RequireQualifiedAccess>]
 module Response =
-  let validationProblemDetails (instance: string) (errors: ValidationErrors) : HttpHandler =
-    errors
-    |> ValidationErrors.toMap
-    |> ProblemDetails.createValidationProblemDetails instance
-    |> fun response -> Response.withStatusCode 400 >> Response.ofJson response
+  let validationProblemDetails (errors: ValidationErrors) : HttpHandler =
+    let response instance errors =
+      errors
+      |> ValidationErrors.toMap
+      |> ProblemDetails.createValidationProblemDetails instance
+      |> fun response -> (Response.withStatusCode 400 >> Response.ofJson response)
+
+    fun ctx ->
+      let path = string ctx.Request.Path
+      response path errors ctx

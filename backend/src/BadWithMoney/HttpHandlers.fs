@@ -14,6 +14,12 @@ open Validus
 open Domain
 open Marten
 
+let toEpoch (dateTime: DateTime) =
+  let difference = dateTime - DateTime.UnixEpoch
+  int difference.TotalSeconds
+
+let min (number1: int) (number2: int) = Math.Min(number1, number2)
+
 let unauthorizedHandler: HttpHandler =
   Response.withStatusCode StatusCodes.Status401Unauthorized >> Response.ofEmpty
 
@@ -28,18 +34,19 @@ let requireAuthentication successHandler =
 
 // TODO: Is this any good?
 let inline budgetAuthorizer
-  (f: HttpContext -> Task<Budget option>)
+  (getBudgetAsync: HttpContext -> Task<Budget option>)
   (onAuthorized: Budget -> HttpHandler)
   : HttpHandler =
   fun ctx -> task {
-    let! budget = f ctx
+    let! budget = getBudgetAsync ctx
 
     match budget with
     | None -> do! notFoundHandler ctx
     | Some budget ->
       match Request.getUserId ctx with
       | Some userId when budget.UserId = userId -> do! onAuthorized budget ctx
-      | _ -> do! forbiddenHandler ctx
+      | Some _ -> do! forbiddenHandler ctx
+      | None -> do! unauthorizedHandler ctx
   }
 
 module GoogleSignIn =
@@ -74,42 +81,113 @@ module GetBudgets =
       | None -> do! unauthorizedHandler ctx
       | Some userId ->
         let! budgets = getBudgetsForUser userId ctx.RequestAborted
+
+        let createDto budget = {|
+          id = budget.Id
+          name = budget.Name
+          created = toEpoch budget.CreatedAt
+          updated = toEpoch budget.UpdatedAt
+        |}
+
+        let budgets = budgets |> List.map createDto
         do! Response.ofJson budgets ctx
     }
 
+module GetBudgetById =
+  let private popularCategoryDto (category: Category, spent: decimal) = category.Name, spent
+
+  let private recentTransactionDto (transaction: Transaction) =
+    match transaction with
+    | Income details -> {|
+        transactionType = "income"
+        amount = decimal details.Amount
+      |}
+    | Expense details -> {|
+        transactionType = "expense"
+        amount = decimal details.Amount
+      |}
+
+  let handler: HttpHandler =
+    requireAuthentication (
+      Services.inject<IQuerySession> (fun querySession ->
+        let findBudgetById = Provider.findBudgetById querySession
+
+        Request.mapRoute
+          (fun reader -> BudgetId.create (reader.GetGuid "budgetId"))
+          (fun budgetId ->
+            Request.mapQuery
+              (fun reader -> {|
+                numberOfCategories = reader.TryGetInt("categories")
+                numberOfTransactions = reader.TryGetInt("transactions")
+              |})
+              (fun query ->
+                let numberOfCategories =
+                  query.numberOfCategories |> Option.map (min 20) |> Option.defaultValue 10
+
+                let numberOfTransactions =
+                  query.numberOfTransactions |> Option.map (min 20) |> Option.defaultValue 10
+
+                budgetAuthorizer
+                  (fun ctx -> findBudgetById budgetId ctx.RequestAborted)
+                  (fun budget ->
+                    let popularCategories =
+                      Budget.popularCategories numberOfCategories budget
+                      |> List.map popularCategoryDto
+                      |> Map.ofList
+
+                    let recentTransactions =
+                      Budget.recentTransactions numberOfTransactions budget
+                      |> List.map recentTransactionDto
+
+                    Response.ofJson
+                      {|
+                        id = budget.Id
+                        name = budget.Name
+                        popularCategories = popularCategories
+                        recentTransactions = recentTransactions
+                      |}))))
+    )
+
 module CreateBudget =
-  type CreateBudgetRequest = { Name: string; MonthlyIncome: decimal }
+  type CreateBudgetRequest = {
+    Name: string
+    AllocableAmount: decimal
+  }
 
   type ValidatedCreateBudgetRequest = {
     Name: BudgetName
-    MonthlyIncome: PositiveDecimal
+    AllocableAmount: PositiveDecimal
   }
 
   let validateRequest (createBudgetRequest: CreateBudgetRequest) = validate {
     let! budgetName = BudgetName.create createBudgetRequest.Name
-    let! monthlyIncome = PositiveDecimal.create createBudgetRequest.MonthlyIncome
+    let! monthlyIncome = PositiveDecimal.create createBudgetRequest.AllocableAmount
 
     return {
       Name = budgetName
-      MonthlyIncome = monthlyIncome
+      AllocableAmount = monthlyIncome
     }
   }
 
-  let handler (saveBudget: Provider.SaveBudget) : HttpHandler =
-    let createBudget request : HttpHandler =
-      fun ctx -> task {
-        let budgetId = % Guid.NewGuid()
+  let createBudget (saveBudget: Provider.SaveBudget) (request: ValidatedCreateBudgetRequest) : HttpHandler =
+    fun ctx -> task {
+      let budgetId = % Guid.NewGuid()
 
-        match Request.getUserId ctx with
-        | None -> do! unauthorizedHandler ctx
-        | Some userId ->
-          let budget = Budget.create budgetId userId request.Name request.MonthlyIncome
-          do! saveBudget budget ctx.RequestAborted
-          do! Response.ofJson budget ctx
-      }
+      match Request.getUserId ctx with
+      | None -> do! unauthorizedHandler ctx
+      | Some userId ->
+        let now = DateTime.UtcNow
+        let budget = Budget.create now budgetId userId request.Name request.AllocableAmount
+        do! saveBudget budget ctx.RequestAborted
+        do! Response.ofJson budget ctx
+    }
 
-    let handleValidationErrors = Response.validationProblemDetails "/budget"
-    Request.mapValidateJson validateRequest createBudget handleValidationErrors
+  let handler: HttpHandler =
+    requireAuthentication (
+      Services.inject<IDocumentSession> (fun documentSession ->
+        let saveBudget = Provider.saveBudget documentSession
+        Request.mapValidateJson validateRequest (createBudget saveBudget) Response.validationProblemDetails)
+    )
 
 module CreateBudgetCategory =
   type CreateBudgetCategoryRequest = {
@@ -148,105 +226,104 @@ module CreateBudgetCategory =
         do! Response.ofJson budget ctx
     }
 
-  let handler (findBudgetById: Provider.FindBudgetById) (saveBudget: Provider.SaveBudget) : HttpHandler =
-    let handleCreateCategoryRequest (request: ValidatedCreateBudgetCategoryRequest) : HttpHandler =
-      fun ctx -> task {
-        let routeParameters = Request.getRoute ctx
-        let budgetId = BudgetId.create (routeParameters.GetGuid "budgetId")
+  let handler: HttpHandler =
+    requireAuthentication (
+      Services.inject<IQuerySession, IDocumentSession> (fun querySession documentSession ->
+        let findBudgetById = Provider.findBudgetById querySession
+        let saveBudget = Provider.saveBudget documentSession
 
-        do!
-          budgetAuthorizer
-            (fun ctx -> findBudgetById budgetId ctx.RequestAborted)
-            (createBudgetCategory saveBudget request)
-            ctx
-      }
+        Request.mapValidateJson
+          validateRequest
+          (fun validatedRequest ->
+            Request.mapRoute
+              (fun reader -> BudgetId.create (reader.GetGuid "budgetId"))
+              (fun budgetId ->
+                budgetAuthorizer
+                  (fun ctx -> findBudgetById budgetId ctx.RequestAborted)
+                  (createBudgetCategory saveBudget validatedRequest)))
+          Response.validationProblemDetails)
+    )
 
-    let handleValidationErrors = Response.validationProblemDetails "/budget/category"
-    Request.mapValidateJson validateRequest handleCreateCategoryRequest handleValidationErrors
+// TODO: Need to change this to CreateTransaction and account for the type.
+module CreateTransaction =
+  type TransactionType =
+    | Income = 1
+    | Expense = 2
 
-module CreateExpense =
-  type CreateExpenseRequest = {
+  type CreateTransactionRequest = {
     CategoryName: string
-    Details: string
     Amount: decimal
+    TransactionType: TransactionType
   }
 
-  type ValidatedCreateExpenseRequest = {
+  type ValidatedCreateTransactionRequest = {
     CategoryName: CategoryName
-    Details: NonEmptyString
     Amount: PositiveDecimal
+    TransactionType: TransactionType
   }
 
-  let validateRequest (createExpenseRequest: CreateExpenseRequest) : ValidationResult<ValidatedCreateExpenseRequest> = validate {
-    let! categoryName = CategoryName.create createExpenseRequest.CategoryName
-    let! details = NonEmptyString.create createExpenseRequest.Details
-    let! amount = PositiveDecimal.create createExpenseRequest.Amount
+  let validateRequest
+    (createTransactionRequest: CreateTransactionRequest)
+    : ValidationResult<ValidatedCreateTransactionRequest> =
+    validate {
+      let! categoryName = CategoryName.create createTransactionRequest.CategoryName
+      let! amount = PositiveDecimal.create createTransactionRequest.Amount
 
-    return {
-      CategoryName = categoryName
-      Details = details
-      Amount = amount
+      return {
+        CategoryName = categoryName
+        Amount = amount
+        TransactionType = createTransactionRequest.TransactionType
+      }
     }
-  }
 
-  let private createExpense
+  let private createTransaction
     (saveBudget: Provider.SaveBudget)
-    (request: ValidatedCreateExpenseRequest)
+    (request: ValidatedCreateTransactionRequest)
     (budget: Budget)
     : HttpHandler =
     fun ctx -> task {
-      let now = DateOnly.FromDateTime(DateTime.UtcNow)
+      let now = DateTime.UtcNow
 
-      let createExpenseResult =
-        Budget.createExpense
-          request.CategoryName
-          {
-            Details = request.Details
-            Amount = request.Amount
-            Date = now
-          }
-          budget
+      let transaction =
+        match request.TransactionType with
+        | TransactionType.Income ->
+          Transaction.Income
+            {
+              Amount = request.Amount
+              OccuredAt = now
+            }
+        | TransactionType.Expense ->
+          Transaction.Expense
+            {
+              Amount = request.Amount
+              OccuredAt = now
+            }
+        | _ -> failwith "Invalid transaction type." // TODO: Should probably create a validator for this.
 
-      match createExpenseResult with
+      let createTransactionResult =
+        Budget.transact transaction request.CategoryName budget
+
+      match createTransactionResult with
       | Error error -> do! Response.ofJson {| error = error |} ctx
       | Ok budget ->
         do! saveBudget budget ctx.RequestAborted
         do! Response.ofJson budget ctx
     }
 
-  let handler (findBudgetById: Provider.FindBudgetById) (saveBudget: Provider.SaveBudget) : HttpHandler =
-    let handleCreateExpenseRequest (request: ValidatedCreateExpenseRequest) : HttpHandler =
-      fun ctx -> task {
-        let routeParameters = Request.getRoute ctx
-        let budgetId = BudgetId.create (routeParameters.GetGuid "budgetId")
+  let handler: HttpHandler =
+    requireAuthentication (
+      Services.inject<IQuerySession, IDocumentSession> (fun querySession documentSession ->
+        let findBudgetById = Provider.findBudgetById querySession
+        let saveBudget = Provider.saveBudget documentSession
 
-        do!
-          budgetAuthorizer
-            (fun ctx -> findBudgetById budgetId ctx.RequestAborted)
-            (createExpense saveBudget request)
-            ctx
-      }
-
-    let handleValidationErrors =
-      Response.validationProblemDetails "/budget/category/expense"
-
-    Request.mapValidateJson validateRequest handleCreateExpenseRequest handleValidationErrors
-
-let createBudgetHandler: HttpHandler =
-  requireAuthentication (Services.inject<IDocumentSession> (Provider.saveBudget >> CreateBudget.handler))
-
-let createBudgetCategory: HttpHandler =
-  requireAuthentication (
-    Services.inject<IQuerySession, IDocumentSession> (fun querySession documentSession ->
-      let saveBudget = Provider.saveBudget documentSession
-      let findBudgetById = Provider.findBudgetById querySession
-      CreateBudgetCategory.handler findBudgetById saveBudget)
-  )
-
-let createExpense: HttpHandler =
-  requireAuthentication (
-    Services.inject<IQuerySession, IDocumentSession> (fun querySession documentSession ->
-      let saveBudget = Provider.saveBudget documentSession
-      let findBudgetById = Provider.findBudgetById querySession
-      CreateExpense.handler findBudgetById saveBudget)
-  )
+        Request.mapValidateJson
+          validateRequest
+          (fun request ->
+            Request.mapRoute
+              (fun reader -> BudgetId.create (reader.GetGuid "budgetId"))
+              (fun budgetId ->
+                budgetAuthorizer
+                  (fun ctx -> findBudgetById budgetId ctx.RequestAborted)
+                  (createTransaction saveBudget request)))
+          Response.validationProblemDetails)
+    )
