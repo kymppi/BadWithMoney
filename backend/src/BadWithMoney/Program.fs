@@ -67,6 +67,7 @@ let main args =
       get "/api/google-signin" (HttpHandlers.GoogleSignIn.signInHandler configuration)
       get "/api/me" HttpHandlers.GoogleSignIn.claims
       post "/api/budgets" HttpHandlers.CreateBudget.handler
+      get "/api/budgets" HttpHandlers.GetBudgets.handler
       get "/api/budgets/{budgetId}" HttpHandlers.GetBudgetById.handler
       post "/api/budgets/{budgetId}/category" HttpHandlers.CreateBudgetCategory.handler
       post "/api/budgets/{budgetId}/category/transaction" HttpHandlers.CreateTransaction.handler

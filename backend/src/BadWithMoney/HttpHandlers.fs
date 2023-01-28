@@ -75,23 +75,27 @@ module GoogleSignIn =
         ctx)
 
 module GetBudgets =
-  let handler (getBudgetsForUser: Provider.GetBudgetsForUser) : HttpHandler =
-    fun ctx -> task {
-      match Request.getUserId ctx with
-      | None -> do! unauthorizedHandler ctx
-      | Some userId ->
-        let! budgets = getBudgetsForUser userId ctx.RequestAborted
+  let handler: HttpHandler =
+    requireAuthentication (
+      Services.inject<IQuerySession> (fun querySession ctx -> task {
+        let getBudgetsForUser = Provider.getBudgetsForUser querySession
 
-        let createDto budget = {|
-          id = budget.Id
-          name = budget.Name
-          created = toEpoch budget.CreatedAt
-          updated = toEpoch budget.UpdatedAt
-        |}
+        match Request.getUserId ctx with
+        | None -> do! unauthorizedHandler ctx
+        | Some userId ->
+          let! budgets = getBudgetsForUser userId ctx.RequestAborted
 
-        let budgets = budgets |> List.map createDto
-        do! Response.ofJson budgets ctx
-    }
+          let createDto budget = {|
+            id = budget.Id
+            name = budget.Name
+            created = toEpoch budget.CreatedAt
+            updated = toEpoch budget.UpdatedAt
+          |}
+
+          let budgets = budgets |> List.map createDto
+          do! Response.ofJson budgets ctx
+      })
+    )
 
 module GetBudgetById =
   let private popularCategoryDto (category: Category, spent: decimal) = category.Name, spent

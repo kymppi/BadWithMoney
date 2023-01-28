@@ -18,12 +18,12 @@ let findBudgetById (querySession: IQuerySession) : FindBudgetById =
     |> Queryable.tryHeadTask cancellationToken
 
 let getBudgetsForUser (querySession: IQuerySession) =
-  fun userId ->
+  fun userId cancellationToken ->
     querySession
     |> Session.query<Budget>
     |> Queryable.filter <@ fun budget -> budget.UserId = userId @>
-    |> Queryable.toListAsync
-    |> Async.map Seq.toList
+    |> Queryable.toListTask cancellationToken
+    |> Task.map Seq.toList
 
 let saveBudget (documentSession: IDocumentSession) : SaveBudget =
   fun budget cancellationToken ->
