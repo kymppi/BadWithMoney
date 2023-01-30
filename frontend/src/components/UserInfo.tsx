@@ -1,20 +1,22 @@
-import { useStore } from '@nanostores/preact';
+import { useMachine } from '@xstate/react';
 import { useEffect, useState } from 'preact/hooks';
 import type { JSX } from 'preact/jsx-runtime';
-import { user } from '../state/user';
+import { authMachine } from '../state/auth';
 
 export const UserInfo = ({ children }: { children: JSX.Element }) => {
-  const userInfo = useStore(user);
+  const [state, send] = useMachine(authMachine);
   const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
     setIsReady(true);
+    console.log(state.matches('Logged In'));
   }, []);
 
-  if (isReady && userInfo.loggedIn) {
+  if (isReady && state.matches('Logged In')) {
     return (
       <div>
-        <p>{userInfo.name}</p>
+        <p>{state.context.user?.name}</p>
+        <button onClick={() => send('logout')}>Logout</button>
       </div>
     );
   }

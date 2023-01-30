@@ -2,7 +2,7 @@
 import Header from '../components/Header.astro';
 import Sidebar from '../components/Sidebar.astro';
 import type { Path } from '../lib/types';
-import type { User } from '../state/user';
+import type { User } from '../state/auth';
 
 export interface Props {
   path: Path[];
@@ -41,9 +41,6 @@ const storeThisUser = JSON.stringify(user);
   </body>
 </html>
 <style is:global>
-  [data-size='hidden'] {
-    display: none;
-  }
   .layout {
     display: grid;
     grid-template-areas:
@@ -56,13 +53,13 @@ const storeThisUser = JSON.stringify(user);
   }
 </style>
 <script>
-  import { getDataFromServer } from '../lib/get-data';
+  import { inspect } from '@xstate/inspect';
 
-  import { User, user } from '../state/user';
-
-  const userFromServer = getDataFromServer<User>('data-temp-user-store');
-
-  if (userFromServer) {
-    user.set(userFromServer);
+  if (typeof window !== 'undefined') {
+    inspect({
+      // options
+      // url: 'https://stately.ai/viz?inspect', // (default)
+      iframe: false,
+    });
   }
 </script>
