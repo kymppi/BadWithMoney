@@ -65,6 +65,7 @@ let main args =
 
     endpoints [
       get "/api/google-signin" (HttpHandlers.GoogleSignIn.signInHandler configuration)
+      post "/api/logout" HttpHandlers.GoogleSignIn.logout
       get "/api/me" HttpHandlers.GoogleSignIn.claims
       post "/api/budgets" HttpHandlers.CreateBudget.handler
       get "/api/budgets" HttpHandlers.GetBudgets.handler

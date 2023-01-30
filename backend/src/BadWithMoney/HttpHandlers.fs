@@ -58,6 +58,10 @@ module GoogleSignIn =
         let properties = AuthenticationProperties(RedirectUri = clientDomain + redirectUrl)
         httpContext.ChallengeAsync(GoogleDefaults.AuthenticationScheme, properties))
 
+  let logout: HttpHandler =
+    fun ctx ->
+    ctx.SignOutAsync(GoogleDefaults.AuthenticationScheme)
+
   let claims: HttpHandler =
     requireAuthentication (fun ctx ->
       let claim (key: string) =
