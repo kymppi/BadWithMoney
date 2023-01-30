@@ -1,20 +1,20 @@
-import { useStore } from '@nanostores/preact';
 import { useEffect, useState } from 'preact/hooks';
 import type { JSX } from 'preact/jsx-runtime';
-import { user } from '../state/user';
+import { authService } from '../state/auth';
 
 export const UserInfo = ({ children }: { children: JSX.Element }) => {
-  const userInfo = useStore(user);
+  const context = authService.machine.context;
   const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
     setIsReady(true);
+    console.log(context);
   }, []);
 
-  if (isReady && userInfo.loggedIn) {
+  if (isReady && context.loggedIn && context.user) {
     return (
       <div>
-        <p>{userInfo.name}</p>
+        <p>{context.user.name}</p>
       </div>
     );
   }
