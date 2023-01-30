@@ -53,7 +53,13 @@ const storeThisUser = JSON.stringify(user);
   }
 </style>
 <script>
-  import { authMachine } from '../state/auth';
+  import { inspect } from '@xstate/inspect';
 
-  console.log(authMachine.initialState.context);
+  if (typeof window !== 'undefined') {
+    inspect({
+      // options
+      // url: 'https://stately.ai/viz?inspect', // (default)
+      iframe: false,
+    });
+  }
 </script>

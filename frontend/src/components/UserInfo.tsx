@@ -9,13 +9,14 @@ export const UserInfo = ({ children }: { children: JSX.Element }) => {
 
   useEffect(() => {
     setIsReady(true);
+    console.log(state.matches('Logged In'));
   }, []);
 
-  if (isReady && state.context.loggedIn && state.context.user) {
+  if (isReady && state.matches('Logged In')) {
     return (
       <div>
-        <p>{state.context.user.name}</p>
-        <button onClick={() => send('')}>Logout</button>
+        <p>{state.context.user?.name}</p>
+        <button onClick={() => send('logout')}>Logout</button>
       </div>
     );
   }

@@ -13,7 +13,7 @@ export interface AuthContext {
 }
 
 const createAuthMachine = (context: AuthContext) => {
-  /** @xstate-layout N4IgpgJg5mDOIC5QEMCuAXAFgOgDIHsoYIACASQDsBiAqfDAbQAYBdRUAB31gEt0f8FdiAAeiAKwAmAOzZJTABwBmACwqAnJPHilANnEAaEAE9ECgIzZxTG0yULJK-VJUBfV0bRZsAOXzoSWmJyagBBDEwwCn4AY2R0MGY2JBAuXn5BYTEEFUVsc2k7Jy0FdQdzFSNTBArxbAUHXSZddRVpBV1zd08IvHxkCB4KKBIAEXjkKkoAN2QAGx5ScfRkJOE0vgEhFOzzDux9XUldBslVBXF1KrNZRSV7k8cmLRVxbpAvHAIBoZHlyf+JDAIh4sHQsDWKQ2GW2oF2+0Ox1O50u1wQWkk2Gk1lsFlKCmk5l07g8IAo+AgcGEn3W3E2mR2iAAtLo0Uy6upOZzpOp2lpLkd3p8+kRICFaektllELp7AddArsQS9kpsWjzEo6rYbHt5AT9JIhb0-AEgmLKBL6bDRIh7kx6uYtEw9jyNSolGiCVZlA8HLkXm9ScLvoNhmMJpaYdKcpI0a1sNq7OZxLppJJ1CTXEA */
+  /** @xstate-layout N4IgpgJg5mDOIC5QEMCuAXAFgOgDIHsoYIACASQDsBiXAeQHFaBVAFQG0AGAXUVAAd8sAJboh+CrxAAPRAHYAbAFZsAZlmKOigJwAWRToBMARiOKANCACeiABxHsGjk-U2NWrUYC+ni2izYAOXx0EgIiSHJqAEFWAAkAUQCWMgBhKJZ4zh4kEAFhUXFJGQR5WQNsG10DFSMbAzq9HQtrBCN5eWw9MvkbWRUtJ0Vq718MHAJkCCEKKBIAEWR0ZCoIcTBsaYA3fABrdYAnMEmmWDB9haWsyTyRMQkc4pVFWWwOHSNZDhtKmx0OLXUzUQ1XsQy+Q2+WlcAx0IxAfnG+Em01mF2WZ32+H22D4ABtFgAzLEAW2wh2Op3Oi2QVxyNwK91Aj2er3en0hv3+gKsiCMBmU73adRsaiUdVk3h8IAo+AgcEkCOugluhQeiAAtPIgQh1cp3PrtJyAX04Qi8IRiJElfk7kVbB5sB5SqV1GVFCoDNqTPYdPqtEN+vIBtpTWNAsFQhaIpRrSrGdJEIpFPY6gYASpenyVBwVF6DDpOm0XbJ3jp5P8tKH-BMpjN5tTYwy7QhDNrjMpHG8MzYOJ9FPJJZ4gA */
   const m = createMachine(
     {
       id: 'auth',
@@ -25,21 +25,29 @@ const createAuthMachine = (context: AuthContext) => {
       initial: 'Loading Data',
       states: {
         'Logged In': {
+          exit: 'logout',
           on: {
-            Logout: 'Not Logged In',
+            LOGOUT: 'Not Logged In',
           },
         },
 
         'Not Logged In': {
           on: {
-            Authenticate: 'Logged In',
+            AUTHENTICATE: 'Logged In',
           },
         },
 
         'Loading Data': {
-          on: {
-            'Invalid Data': 'Not Logged In',
-            'Data exists': 'Logged In',
+          invoke: {
+            id: 'readUserData',
+            src: 'readUserData',
+            onDone: {
+              target: 'Logged In',
+              actions: 'saveUser',
+            },
+            onError: {
+              target: 'Not Logged In',
+            },
           },
         },
       },
@@ -50,6 +58,26 @@ const createAuthMachine = (context: AuthContext) => {
         logout: (context, event) => {
           console.log('logout');
         },
+        saveUser: (context, event) => {
+          context.user = event.data as User;
+          context.loggedIn = true;
+        },
+      },
+      services: {
+        readUserData: (context, event) => {
+          return new Promise((resolve, reject) => {
+            if (typeof window !== 'undefined') {
+              const dataFromServer = getDataFromServer<User>(
+                'data-temp-user-store'
+              );
+              if (dataFromServer && dataFromServer.id && !context.loggedIn) {
+                resolve(dataFromServer);
+              } else {
+                reject();
+              }
+            }
+          });
+        },
       },
     }
   );
@@ -59,19 +87,11 @@ const createAuthMachine = (context: AuthContext) => {
 
 let context: AuthContext = { loggedIn: false, user: undefined };
 
-if (typeof window !== 'undefined') {
-  const dataFromServer = getDataFromServer<User>('data-temp-user-store');
-  if (dataFromServer.id) {
-    context = {
-      loggedIn: true,
-      user: dataFromServer,
-    };
-  }
-}
-
 export const authMachine = createAuthMachine(context);
 
-export const authService = interpret(authMachine).onTransition((state) => {
+export const authService = interpret(authMachine, {
+  devTools: true,
+}).onTransition((state) => {
   if (state.changed) {
     console.log(state.value);
   }
