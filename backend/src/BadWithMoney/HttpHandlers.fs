@@ -7,6 +7,7 @@ open System.Threading.Tasks
 open FSharp.UMX
 open FsToolkit.ErrorHandling
 open Microsoft.AspNetCore.Authentication
+open Microsoft.AspNetCore.Authentication.Cookies
 open Microsoft.AspNetCore.Authentication.Google
 open Microsoft.AspNetCore.Http
 open Microsoft.Extensions.Configuration
@@ -57,6 +58,10 @@ module GoogleSignIn =
         let clientDomain = configuration["CLIENT_DOMAIN"]
         let properties = AuthenticationProperties(RedirectUri = clientDomain + redirectUrl)
         httpContext.ChallengeAsync(GoogleDefaults.AuthenticationScheme, properties))
+
+  let logout: HttpHandler =
+    fun ctx ->
+      ctx.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme)
 
   let claims: HttpHandler =
     requireAuthentication (fun ctx ->
