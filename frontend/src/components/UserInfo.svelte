@@ -11,11 +11,11 @@
   });
 </script>
 
-<div>
+<section class="flex border-2 border-solid border-black p-2">
   {#if $state.matches('Logged In')}
-    <p>Welcome, {$state.context.user.name}!</p>
-    <button on:click={() => authService.send('LOGOUT')}>Log out</button>
+    <h1 class="mr-4 items-center justify-center">{$state.context.user.email}</h1>
+      <button on:click={() => authService.send('LOGOUT')}><slot name="icon" /></button>
   {:else}
     <button on:click={() => authService.send('AUTHENTICATE')}>Log in</button>
   {/if}
-</div>
+</section>

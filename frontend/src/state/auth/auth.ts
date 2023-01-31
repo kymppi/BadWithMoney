@@ -14,6 +14,7 @@ export interface User {
 export interface AuthContext {
   loggedIn: boolean;
   user?: User;
+  restored?: boolean;
 }
 
 export type AuthEvent =
@@ -23,7 +24,7 @@ export type AuthEvent =
   | { type: 'User verified' };
 
 const createAuthMachine = (context: AuthContext) => {
-  /** @xstate-layout N4IgpgJg5mDOIC5QEMCuAXAFgOgDIHsoYIACASQDsBiXAeQHFaBVAFQG0AGAXUVAAd8sAJboh+CrxAAPRAGYALAA5s8gKyqAnLIDssrdvmyAjABoQAT0QAmbRuxWdHVbMVXFHeRoC+Xs2izYAHL46CQERJDk1ACCrAASAKKBLGQAwtEsCZw8SCACwqLikjII2hza2EaK2gBs5eraRp7aZpYIVg4qtk0cGh41NdqKPn4YOATIEEIUUCQAIsjoyFQQ4mDY0wBu+ADW6wBOYJNMsGD7C0vZkvkiYhK5JS4VOu5lLvIGitWtiDVGKgNVEZZDUdBobKonCMQP5xvhJtNZhdlmd9vh9tg+AAbRYAM3RAFtsIdjqdzotkFdcjdCvdQI95DVKgNDPIOIMPFZ5D8EFUKr0jBwFDYahpwbJobC8IQoIiolQqfxBLcig9EBoavJsBohjY1BqrEZdDyrFp7BwjFYnOC2ZqrJKxtKiHLKAqjDklQU7sVEEZLRxsIMgYa2aoBooTWarf7NFz2fImj5fCAKPgIHBJLDrsraT6EABaGo8-NWJlChRaKpNVSKMXyB0BcLEKLZr2q+mIdSyFTOK2yU1c4Em6rMoXabSqNRKLQNnDBUJNyKUVsqunSTtA7CuU1fDjs8euE2dHUaS3GWSqN4ce3JqUTKYzeYUle5tUIeRWHnVrqnkFGP5uBKt6Ok2LprjS3pvjqWrTjUri9BqtSmBY1iGj+Z7ApeQocMMwEBAASpAQiHAAxqELD4CQ9D4IQWJgGEhDTC+kEdrygrdkMihqJeoofKWX5cdgl5qIomh+g4GjyPWSZAA */
+  /** @xstate-layout N4IgpgJg5mDOIC5QEMCuAXAFgOgDIHsoYIACASQDsBiXAeQHFaBVAFQG0AGAXUVAAd8sAJboh+CrxAAPRAHYAHB2wBWACwBGAGwBOTco4AmDhzUAaEAE9EB9euzyAzE+fqO62R1UGAvt-NosbAA5fHQSAiJIcmoAQVYACQBRIJYyAGEYlkTOHiQQAWFRcUkZBFsHJU15WWUDeVVFNXllcysEG21sDkdnZWV1B0dffwwcAmQIIQooEgARZHRkKghxMGwpgDd8AGs1gCcwCaZYMD35xZzJApExCTzShSU1LV19IxNVVsQHdXlsTU86mU8m0P00shsymGIACY3wEymM3OS1Oe3we2wfAANgsAGbogC22AORxOZwWyEueWuRTuoAeihUGh0ekMxjMlmsmgM2GcTlUNVkqlUyhq0NheEIUER0SoVP4ghuxXuiHUBgq2FU2m1hn02nk3NkXwQoN5fJF2i1VXk4tGkqIMsocvUuQVhVuJVVygcsmwsm0WgcemUlq8n057Tq-x6DlFnjUeh8fhhdoASnB0OiwCQAGJogkkLH4ADGyCxAGVM3tkDAqKnEuWWLR6wB9WaZGLy-KK2me9rVaNC7Vq5qi0HGhp2eRq-SeUGOGy2wLp2BV7N5-AFoulitVmtgKhCCDbLs0j0q-u+qpDgN1Pr+hzGgw1Lo9DQeBrab2aXzJij4CA4EkWErh7c96UQABaTRjUg5RsG1RCkOQhwlzhSJSEoUD3WVCCEG5BxNR9WoNCDVRBm0Y1pxUYxjAFKo9BFG1kwlEIwgiYhomwpU6WkRBtBfBwDAMS0RO0QwfSfdROmBPk+gGIYWLtcZJmmOYKW43sL1UPRNSQwYDFFUUYIjQyeW6flxNsZ9tAMVQ0PtaU1Kw6kwNwviylUDhfX1L9wS8DhxP6J8DE0BC+SDXRbBMBz00mA5izCFh8BIeh8EILFswiKZNPAjz3GMf47K-ZREx9Oynw4QjyP5LRvIFYVYozLNc3zQsSzLSt0X3XL3NKLwn3kczaLcYV1WFIVf28IA */
   const m = createMachine(
     {
       id: 'auth',
@@ -33,7 +34,7 @@ const createAuthMachine = (context: AuthContext) => {
       },
       context,
       predictableActionArguments: true,
-      initial: 'Loading Data',
+      initial: 'Restore From localStorage',
       states: {
         'Logged In': {
           exit: 'logout',
@@ -75,6 +76,16 @@ const createAuthMachine = (context: AuthContext) => {
         'Redirect To Google Login': {
           entry: 'redirectToGoogleLogin',
         },
+
+        'Restore From localStorage': {
+          always: [
+            {
+              target: 'Logging In',
+              cond: 'canRestoreData',
+            },
+            { target: 'Loading Data' },
+          ],
+        },
       },
       tsTypes: {} as import('./auth.typegen').Typegen0,
     },
@@ -97,10 +108,14 @@ const createAuthMachine = (context: AuthContext) => {
       },
       guards: {
         canLogin: (context, _event) => {
+          if (context.restored && context.user) return true;
           return !(context.user && context.loggedIn ? true : false);
         },
         isLoggedIn: (context, _event) => {
           return context.user && context.loggedIn ? true : false;
+        },
+        canRestoreData: (context, _event) => {
+          return context.restored && context.user ? true : false;
         },
       },
     }
@@ -111,8 +126,29 @@ const createAuthMachine = (context: AuthContext) => {
 
 let context: AuthContext = { loggedIn: false, user: undefined };
 
+// restore user from localStorage
+try {
+  const jsonState = localStorage.getItem('app-state');
+  const parsed = JSON.parse(jsonState || '{}');
+  context = { ...parsed, restored: true };
+} catch (e) {
+  // unable to read from localStorage
+}
+
 export const authMachine = createAuthMachine(context);
 
 export const authService = interpret(authMachine, {
   devTools: true,
-}).start();
+})
+  .onTransition((state, event) => {
+    const jsonState = JSON.stringify(state.context);
+
+    if (state.context.loggedIn) {
+      try {
+        localStorage.setItem('app-state', jsonState);
+      } catch (e) {
+        // unable to save to localStorage
+      }
+    }
+  })
+  .start();

@@ -5,6 +5,13 @@ import { getUser } from '../lib/user';
 const user = await getUser(Astro.request.headers.get('cookie'));
 ---
 
-<Layout user={user} path={[{ label: 'Home', link: '/home' }]}>
+<Layout
+  user={user}
+  path={[{ label: 'Home', link: '/home' }]}
+  links={[
+    { label: 'Budgets', icon: 'mdi:format-list-group', link: '/budgets/' },
+    ...Array(4).fill({ label: 'Placeholder', icon: 'mdi:money', link: '/' }),
+  ]}
+>
   <iframe data-xstate width="100%" height="100%"></iframe>
 </Layout>

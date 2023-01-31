@@ -1,0 +1,16 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { getUser } from '../lib/user';
+
+const user = await getUser(Astro.request.headers.get('cookie'));
+---
+
+<Layout
+  user={user}
+  path={[
+    { label: 'Home', link: '/home' },
+    { label: 'Budgets', link: '/budgets' },
+  ]}
+>
+  hi
+</Layout>

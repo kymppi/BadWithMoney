@@ -29,12 +29,13 @@
         };
         eventsCausingGuards: {
           "canLogin": "AUTHENTICATE";
+"canRestoreData": "";
 "isLoggedIn": "";
         };
         eventsCausingServices: {
-          "readUserData": "xstate.init";
+          "readUserData": "";
         };
-        matchesStates: "Loading Data" | "Logged In" | "Logging In" | "Not Logged In" | "Redirect To Google Login";
+        matchesStates: "Loading Data" | "Logged In" | "Logging In" | "Not Logged In" | "Redirect To Google Login" | "Restore From localStorage";
         tags: never;
       }
   
