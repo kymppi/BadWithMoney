@@ -21,17 +21,22 @@ let toEpoch (dateTime: DateTime) =
 
 let min (number1: int) (number2: int) = Math.Min(number1, number2)
 
-let unauthorizedHandler: HttpHandler =
-  Response.withStatusCode StatusCodes.Status401Unauthorized >> Response.ofEmpty
+let statusCodeResponse code : HttpHandler =
+  Response.withStatusCode code >> Response.ofEmpty
 
-let forbiddenHandler: HttpHandler =
-  Response.withStatusCode StatusCodes.Status403Forbidden >> Response.ofEmpty
+let unauthorized: HttpHandler = statusCodeResponse StatusCodes.Status401Unauthorized
+let forbidden: HttpHandler = statusCodeResponse StatusCodes.Status403Forbidden
 
-let notFoundHandler: HttpHandler =
-  Response.withStatusCode StatusCodes.Status404NotFound >> Response.ofEmpty
+let notFound message : HttpHandler =
+  Response.withStatusCode StatusCodes.Status404NotFound
+  >> Response.ofPlainText message
+
+let conflict message : HttpHandler =
+  Response.withStatusCode StatusCodes.Status409Conflict
+  >> Response.ofPlainText message
 
 let requireAuthentication successHandler =
-  Request.ifAuthenticated successHandler unauthorizedHandler
+  Request.ifAuthenticated successHandler unauthorized
 
 // TODO: Is this any good?
 let inline budgetAuthorizer
@@ -42,12 +47,12 @@ let inline budgetAuthorizer
     let! budget = getBudgetAsync ctx
 
     match budget with
-    | None -> do! notFoundHandler ctx
+    | None -> do! notFound "That budget was not found!" ctx
     | Some budget ->
       match Request.getUserId ctx with
       | Some userId when budget.UserId = userId -> do! onAuthorized budget ctx
-      | Some _ -> do! forbiddenHandler ctx
-      | None -> do! unauthorizedHandler ctx
+      | Some _ -> do! forbidden ctx
+      | None -> do! unauthorized ctx
   }
 
 module GoogleSignIn =
@@ -60,8 +65,7 @@ module GoogleSignIn =
         httpContext.ChallengeAsync(GoogleDefaults.AuthenticationScheme, properties))
 
   let logout: HttpHandler =
-    fun ctx ->
-      ctx.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme)
+    fun ctx -> ctx.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme)
 
   let claims: HttpHandler =
     requireAuthentication (fun ctx ->
@@ -86,7 +90,7 @@ module GetBudgets =
         let getBudgetsForUser = Provider.getBudgetsForUser querySession
 
         match Request.getUserId ctx with
-        | None -> do! unauthorizedHandler ctx
+        | None -> do! unauthorized ctx
         | Some userId ->
           let! budgets = getBudgetsForUser userId ctx.RequestAborted
 
@@ -183,7 +187,7 @@ module CreateBudget =
       let budgetId = % Guid.NewGuid()
 
       match Request.getUserId ctx with
-      | None -> do! unauthorizedHandler ctx
+      | None -> do! unauthorized ctx
       | Some userId ->
         let now = DateTime.UtcNow
         let budget = Budget.create now budgetId userId request.Name request.AllocableAmount
@@ -229,7 +233,8 @@ module CreateBudgetCategory =
         Budget.createCategory request.CategoryName request.AmountAllocated budget
 
       match createCategoryResult with
-      | Error error -> do! Response.ofJson {| error = error |} ctx
+      | Error Budget.CreateCategoryError.CategoryAlreadyExists ->
+        do! conflict $"The category `{request.CategoryName}` already exists" ctx
       | Ok budget ->
         do! saveBudget budget ctx.RequestAborted
         do! Response.ofJson budget ctx
@@ -313,7 +318,8 @@ module CreateTransaction =
         Budget.transact transaction request.CategoryName budget
 
       match createTransactionResult with
-      | Error error -> do! Response.ofJson {| error = error |} ctx
+      | Error Budget.TransactionError.CategoryDoesNotExist ->
+        do! notFound $"The category `{request.CategoryName}` was not found" ctx
       | Ok budget ->
         do! saveBudget budget ctx.RequestAborted
         do! Response.ofJson budget ctx
