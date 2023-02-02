@@ -1,17 +1,22 @@
 ---
 import Header from '../components/Header.astro';
-import Sidebar from '../components/Sidebar.astro';
+import Sidebar, { Link } from '../components/Sidebar.astro';
 import type { Path } from '../lib/types';
-import type { User } from '../state/user';
+import type { User } from '../state/auth/auth';
 
 export interface Props {
   path: Path[];
+  links?: Link[];
   user?: User;
 }
 
-const { path, user } = Astro.props;
+const { path, user, links } = Astro.props;
 
 const storeThisUser = JSON.stringify(user);
+
+const gridTemplateArea = links
+  ? `"logo header" "sidebar content"`
+  : `"logo header" "content content"`;
 ---
 
 <!DOCTYPE html>
@@ -25,30 +30,25 @@ const storeThisUser = JSON.stringify(user);
   </head>
   <body class="layout min-h-screen">
     <Header path={path} />
-    <h1 class="ga-logo text-center font-bold text-xl my-auto">BadWithMoney</h1>
+    <div
+      class="border-r-2 border-b-2 border-solid border-black flex items-center justify-center"
+    >
+      <h1 class="ga-logo text-center font-bold text-xl my-auto">
+        BadWithMoney
+      </h1>
+    </div>
 
-    <Sidebar
-      links={Array(5).fill({
-        link: '#',
-        label: 'Placeholder',
-        icon: 'mdi:money',
-      })}
-    />
+    {links && <Sidebar links={links} />}
     <div class="ga-content bg-purple-500">
       <slot />
     </div>
     <div data-hidden data-temp-user-store={storeThisUser}></div>
   </body>
 </html>
-<style is:global>
-  [data-size='hidden'] {
-    display: none;
-  }
+<style is:global define:vars={{ gridTemplateArea }}>
   .layout {
     display: grid;
-    grid-template-areas:
-      'logo header'
-      'sidebar content';
+    grid-template-areas: var(--gridTemplateArea);
     grid-template-columns: 180px 1fr;
     /* 180px is the sidebar width */
     grid-template-rows: 60px 1fr;
@@ -56,13 +56,13 @@ const storeThisUser = JSON.stringify(user);
   }
 </style>
 <script>
-  import { getDataFromServer } from '../lib/get-data';
+  import { inspect } from '@xstate/inspect';
 
-  import { User, user } from '../state/user';
-
-  const userFromServer = getDataFromServer<User>('data-temp-user-store');
-
-  if (userFromServer) {
-    user.set(userFromServer);
+  if (typeof window !== 'undefined') {
+    inspect({
+      // options
+      // url: 'https://stately.ai/viz?inspect', // (default)
+      iframe: false,
+    });
   }
 </script>
