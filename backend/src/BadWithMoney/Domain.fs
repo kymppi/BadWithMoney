@@ -134,12 +134,14 @@ module Budget =
     UpdatedAt = now
   }
 
-  let transact transaction categoryName budget =
-    let category =
-      budget.Categories |> List.tryFind (fun category -> category.Name = categoryName)
+  let getBudgetCategory name budget =
+    budget.Categories |> List.tryFind (fun c -> c.Name = name)
 
-    match category with
-    | None -> Error "That budget category does not exist."
+  type TransactionError = CategoryDoesNotExist
+
+  let transact transaction categoryName budget =
+    match getBudgetCategory categoryName budget with
+    | None -> Error TransactionError.CategoryDoesNotExist
     | Some category ->
       let transactions = transaction :: category.Transactions
 
@@ -148,17 +150,14 @@ module Budget =
             Transactions = transactions
         }
 
-      Ok
-        { budget with
-            Categories = List.replace category newCategory budget.Categories
-        }
+      let categories = budget.Categories |> List.replace category newCategory
+      Ok { budget with Categories = categories }
+
+  type CreateCategoryError = CategoryAlreadyExists
 
   let createCategory categoryName allocation budget =
-    let existingCategory =
-      budget.Categories |> List.tryFind (fun c -> c.Name = categoryName)
-
-    match existingCategory with
-    | Some _ -> Error "Category already exists."
+    match getBudgetCategory categoryName budget with
+    | Some _ -> Error CreateCategoryError.CategoryAlreadyExists
     | None ->
       let category = {
         Name = categoryName
