@@ -64,14 +64,14 @@ let main args =
     use_authorization
 
     endpoints [
-      get "/api/google-signin" (HttpHandlers.GoogleSignIn.signInHandler configuration)
-      post "/api/logout" HttpHandlers.GoogleSignIn.logout
-      get "/api/me" HttpHandlers.GoogleSignIn.claims
-      post "/api/budgets" HttpHandlers.CreateBudget.handler
-      get "/api/budgets" HttpHandlers.GetBudgets.handler
-      get "/api/budgets/{budgetId}" HttpHandlers.GetBudgetById.handler
-      post "/api/budgets/{budgetId}/category" HttpHandlers.CreateBudgetCategory.handler
-      post "/api/budgets/{budgetId}/category/transaction" HttpHandlers.CreateTransaction.handler
+      get "/api/google-signin" (Handlers.Authentication.signInHandler configuration)
+      post "/api/logout" Handlers.Authentication.logout
+      get "/api/me" Handlers.Authentication.claims
+      post "/api/budgets" Handlers.CreateBudget.handler
+      get "/api/budgets" Handlers.GetAllBudgets.handler
+      get "/api/budgets/{budgetId}" Handlers.GetBudgetById.handler
+      post "/api/budgets/{budgetId}/category" Handlers.CreateCategory.handler
+      post "/api/budgets/{budgetId}/category/transaction" Handlers.CreateTransaction.handler
     ]
   }
 

@@ -1,12 +1,12 @@
 ﻿[<AutoOpen>]
-module RequestUtils
+module Http
 
 open System.Security.Claims
-open Microsoft.AspNetCore.Http
-open Falco
-open Validus
-open FsToolkit.ErrorHandling
 open Domain
+open Falco
+open FsToolkit.ErrorHandling
+open Microsoft.AspNetCore.Http
+open Validus
 
 type ProblemDetails = {
   Type: string
@@ -47,6 +47,11 @@ module Request =
 
     Request.mapJson handleOk
 
+  let requiresAuthentication successHandler =
+    Request.ifAuthenticated
+      successHandler
+      (Response.withStatusCode StatusCodes.Status401Unauthorized >> Response.ofEmpty)
+
 [<RequireQualifiedAccess>]
 module Response =
   let validationProblemDetails (errors: ValidationErrors) : HttpHandler =
@@ -59,3 +64,17 @@ module Response =
     fun ctx ->
       let path = string ctx.Request.Path
       response path errors ctx
+
+  let statusCode code : HttpHandler =
+    Response.withStatusCode code >> Response.ofEmpty
+
+  let unauthorized: HttpHandler = statusCode StatusCodes.Status401Unauthorized
+  let forbidden: HttpHandler = statusCode StatusCodes.Status403Forbidden
+
+  let notFound message : HttpHandler =
+    Response.withStatusCode StatusCodes.Status404NotFound
+    >> Response.ofPlainText message
+
+  let conflict message : HttpHandler =
+    Response.withStatusCode StatusCodes.Status409Conflict
+    >> Response.ofPlainText message

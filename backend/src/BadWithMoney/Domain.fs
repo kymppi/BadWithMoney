@@ -82,6 +82,7 @@ type Budget = {
 [<RequireQualifiedAccess>]
 module BudgetId =
   let create (id: Guid) : BudgetId = %id
+  let createNew () = create (Guid.NewGuid())
 
 [<RequireQualifiedAccess>]
 module BudgetName =
@@ -123,9 +124,9 @@ module NonEmptyString =
 
 [<RequireQualifiedAccess>]
 module Budget =
-  let create now budgetId userId name maximumAllocable = {
+  let create now budgetId ownerId name maximumAllocable = {
     Id = budgetId
-    UserId = userId
+    UserId = ownerId
     Name = name
     MaximumAllocable = maximumAllocable
     Categories = []

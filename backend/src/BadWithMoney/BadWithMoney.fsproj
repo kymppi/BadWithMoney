@@ -8,9 +8,15 @@
   <ItemGroup>
     <Compile Include="Extensions.fs" />
     <Compile Include="Domain.fs" />
+    <Compile Include="Http.fs" />
     <Compile Include="Provider.fs" />
-    <Compile Include="Request.fs" />
-    <Compile Include="HttpHandlers.fs" />
+    <Compile Include="Authorization.fs" />
+    <Compile Include="Handlers\CreateBudget.fs" />
+    <Compile Include="Handlers\GetBudgetById.fs" />
+    <Compile Include="Handlers\GetAllBudgets.fs" />
+    <Compile Include="Handlers\CreateTransaction.fs" />
+    <Compile Include="Handlers\Authentication.fs" />
+    <Compile Include="Handlers\CreateCategory.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
 
