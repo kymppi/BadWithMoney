@@ -34,7 +34,7 @@ export const redirectToGoogleLogin =
   typeof window !== 'undefined'
     ? () => {
         window.location.href =
-          '/api/google-signin/?redirectUrl=/';
+          '/api/google-signin/';
       }
     : () => {};
 

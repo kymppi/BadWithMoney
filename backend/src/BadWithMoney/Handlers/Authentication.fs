@@ -10,8 +10,9 @@ open Microsoft.Extensions.Configuration
 
 let signInHandler (configuration: IConfiguration) : HttpHandler =
   Request.mapQuery
-    (fun reader -> reader.GetString("redirectUrl"))
+    (fun reader -> reader.TryGetString("redirectUrl"))
     (fun redirectUrl httpContext ->
+      let redirectUrl = redirectUrl |> Option.defaultValue "/"
       let clientDomain = configuration["CLIENT_DOMAIN"]
       let properties = AuthenticationProperties(RedirectUri = clientDomain + redirectUrl)
       httpContext.ChallengeAsync(GoogleDefaults.AuthenticationScheme, properties))

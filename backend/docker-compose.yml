@@ -36,6 +36,7 @@ services:
       - ConnectionStrings__Redis=redis,password=${REDIS_PASSWORD}
       - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
       - GOOGLE_SECRET=${GOOGLE_SECRET}
+      - CLIENT_DOMAIN=${CLIENT_DOMAIN}
     depends_on:
       postgresql:
         condition: service_healthy
